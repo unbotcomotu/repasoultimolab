@@ -48,14 +48,14 @@
 <h1>STF-Puzzle Simplified Version</h1>
 <div class="row ajustarCentro" id="bloqueSeleccionJugador" style="width: 500px;height: auto">
     <div class="row text-center ajustarCentro" style="margin-bottom: 20px;margin-top: 10px">
-        <img src="/fotoDefecto.png" style="max-width: 300px;opacity: 0" alt="">
-        <img src="/fotoDefecto.png" id="imagenMostrar" class="img-fluid" style="max-width: 300px;z-index: 10000;position: absolute" alt="">
+        <img src="/fotoDefecto.jpg" style="max-width: 300px;opacity: 0" alt="">
+        <img src="/fotoDefecto.jpg" id="imagenMostrar" class="img-fluid" style="max-width: 300px;z-index: 10000;position: absolute" alt="">
 
         <input type="file" onchange="cambiarFoto(event)" accept="image/jpeg" style="display: none" id="imagenInput">
     </div>
     <div style="display: flex;justify-content: space-between;margin-left: 10px;margin-right: 10px;padding: 20px" class="row">
         <a style="width: 30%;cursor: pointer" onclick="cambiarColor()" class="botonCambiarColor"></a>
-        <input onchange="validarIniciarJuego()" id="dimensiones" style="width: auto" placeholder="Ingrese las dimensiones del puzzle" class="form-control">
+        <input oninput="validarIniciarJuego()" id="dimensiones" style="width: auto" placeholder="Ingrese las dimensiones del puzzle" class="form-control">
     </div>
     <div class="row" style="display: flex;justify-content: center;margin-bottom: 10px;margin-top: 20px">
         <a class="btn btn-success" onclick="clicarSeleccionarFoto()" style="width: auto;padding: 10px">Seleccionar personaje</a>
@@ -66,7 +66,7 @@
 </div>
 <div class="row text-center" id="contenedorJuego" style="width: 100%;display: none">
 </div>
-<script>
+<script th:inline="javascript">
     let urlFoto="fotoDefecto.png";
     let numeroColorActual=0;
     const listaColores=["green","red","blue","skyblue","purple","orange","darkred","lightgreen"];
@@ -82,6 +82,83 @@
     let posicionBloqueDisponible=null;
     let movimientoValido=false;
     const cantidadDeMovimientosIniciales=9;
+    let matrizLineal=/*[[${matrizLineal}]]*/;
+    document.addEventListener('DOMContentLoaded', function() {
+        if(matrizLineal!=null){
+            iniciarJuego();
+        }
+    });
+    async function cargarImagenPredeterminada() {
+        const fileInput = document.getElementById('imagenInput');
+        const response = await fetch('/fotoDefecto.jpg');
+        const data = await response.blob();
+        const metadata = {
+            type: 'image/jpeg'
+        };
+        const file = new File([data], 'fotoDefecto.jpg', metadata);
+        const dataTransfer = new DataTransfer();
+        dataTransfer.items.add(file);
+        fileInput.files = dataTransfer.files;
+    }
+    function obtenerMatrizLineal(){
+        let cadena="";
+        console.log(matriz)
+        console.log(matriz[1][0])
+        for(let i=0;i<dimension;i++){
+            console.log(matriz[i])
+            for(let j=0;j<dimension;j++){
+                const bloque=matriz[i][j];
+                if(bloque.x==dimension-1&&bloque.y==dimension-1){
+                    cadena+="X";
+                }else {
+                    cadena+=bloque.x*3+bloque.y+1;
+                }
+            }
+        }
+        console.log(cadena)
+        console.log(matriz)
+        return cadena;
+    }
+    function actualizarMatrizNormal(matrizLineal){
+        let matrizAux=[];
+        const matrizLinealArray=matrizLineal.split("");
+        dimension=Math.sqrt(matrizLinealArray.length);
+        for(let i=0;i<dimension;i++){
+            let filaAux=[];
+            for(let j=0;j<dimension;j++){
+                let valor=matrizLinealArray[i*dimension+j];
+                if(valor==="X"){
+                    valor=dimension*dimension-1;
+                    posicionBloqueDisponible={x:i,y:j}
+                    console.log(posicionBloqueDisponible)
+                }else {
+                    valor-=1;
+                }
+                filaAux.push({x:parseInt(Math.floor(valor/dimension)),y:parseInt(valor-i*dimension)});
+            }
+            matrizAux.push(filaAux);
+        }
+        matriz=matrizAux;
+    }
+    function subirFoto(){
+        const imagen=$("#imagenInput");
+        let formData=new FormData();
+        formData.append("imagen",imagen[0].files[0]);
+        formData.append("matriz",obtenerMatrizLineal());
+        $.ajax({
+            url: '/subirFoto',
+            type: 'POST',
+            contentType: false,
+            processData: false,
+            data: formData,
+            success: function (response) {
+                console.log("yupi");
+            },
+            error: function (xhr, status, error) {
+                console.log("aiuda")
+            }
+        });
+    }
     function cambiarFoto(event){
         const file = event.target.files[0];
         if (file&&file.type==="image/jpeg") {
@@ -110,9 +187,12 @@
     function validarIniciarJuego(){
         const imagen=$("#imagenMostrar");
         const dimensiones=$("#dimensiones").val();
+        let flag=true;
+        if(dimensiones.length!==3){
+            flag=false;
+        }
         const aux=dimensiones.split("x");
         const botonIniciarJuego=$("#botonIniciarJuego");
-        let flag=true;
         if(aux.length!==2){
             flag=false;
         }
@@ -128,11 +208,18 @@
             botonIniciarJuego.css("display","none");
         }
     }
-    function iniciarJuego(){
-        matriz=[];
+    async function iniciarJuego(){
+        if(matrizLineal!=null){
+            matriz=[];
+            urlFoto="/mostrarImagen";
+        }
         $("#bloqueSeleccionJugador").css("display","none");
         $("#botonIniciarJuego").css("display","none");
-        dimension=$("#dimensiones").val().split("x")[0]
+        if(matrizLineal!=null){
+            actualizarMatrizNormal(matrizLineal);
+        }else {
+            dimension=$("#dimensiones").val().split("x")[0]
+        }
         const contenedorJuego=$("#contenedorJuego");
         const dimensionImagen=dimension*100+"%";
         for(let i=0;i<dimension;i++){
@@ -145,25 +232,36 @@
                 const bottomInset=(dimension-i-1)/dimension;
                 const leftInset=j/dimension;
                 const desplazamientoImagenRight=j*100+"%";
-                fila.push({x:i,y:j});
+                if(matrizLineal==null){
+                    fila.push({x:i,y:j});
+                }
                 if(i==dimension-1&&j==dimension-1){
                     filaImagenes.push('<img style="clip-path: inset('+topInset+' '+rightInset+' '+bottomInset+' '+leftInset+');width: '+dimensionImagen+';height: '+dimensionImagen+';position: relative;right: '+desplazamientoImagenRight+';bottom: '+desplazamientoImagenBottom+'" alt="">\n')
                 }else {
                     filaImagenes.push('<img src="'+urlFoto+'" style="clip-path: inset('+topInset+' '+rightInset+' '+bottomInset+' '+leftInset+');width: '+dimensionImagen+';height: '+dimensionImagen+';position: relative;right: '+desplazamientoImagenRight+';bottom: '+desplazamientoImagenBottom+'" alt="">\n');
                 }
             }
-            posicionBloqueDisponible={x:dimension-1,y:dimension-1};
-            matriz.push(fila);
+            if(matrizLineal==null){
+                posicionBloqueDisponible={x:dimension-1,y:dimension-1};
+                matriz.push(fila);
+            }
             matrizImagenes.push(filaImagenes);
         }
+
+        let imagen=$("#imagenInput").val();
+        if(imagen===""){
+            await cargarImagenPredeterminada();
+        }
+        subirFoto();
         contenedorJuego.css("display","");
-        realizarMoviemientosAleatorios();
+        if(matrizLineal==null){
+            realizarMovimientosAleatorios();
+        }
         reiniciarContenedorJuego();
     }
-    function realizarMoviemientosAleatorios(){
+    function realizarMovimientosAleatorios(){
         let contador=0;
         while(1){
-            console.log(contador)
             const i1=Math.floor((Math.random()*dimension));
             const j1=Math.floor((Math.random()*dimension));
             const i2=posicionBloqueDisponible.x;
@@ -180,42 +278,6 @@
             }
         }
     }
-    /*<div className="row" style="height: 500px;width: 500px">
-        <div className="row" style="width: 100%;height: 33.3%">
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(0% 66.6% 66.6% 0%);width: 300%;height: 300%;position: relative;right: 0%;top: 0%" alt="">
-            </div>
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(0% 33.3% 66.6% 33.3%);width: 300%;height: 300%;position: relative;right: 100%;top: 0%" alt="">
-            </div>
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(0% 0% 66.6% 66.6%);width: 300%;height: 300%;position: relative;right: 200%;top: 0%" alt="">
-            </div>
-        </div>
-        <div className="row" style="width: 100%;height: 33.3%">
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(33.3% 66.6% 33.3% 0%);width: 300%;height: 300%;position: relative;right: 0%;bottom: 100%" alt="">
-            </div>
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(33.3% 33.3% 33.3% 33.3%);width: 300%;height: 300%;position: relative;right: 100%;bottom: 100%" alt="">
-            </div>
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(33.3% 0% 33.3% 66.6%);width: 300%;height: 300%;position: relative;right: 200%;bottom: 100%" alt="">
-            </div>
-        </div>
-        <div className="row" style="width: 100%;height: 33.3%">
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(66.6% 66.6% 0% 0%);width: 300%;height: 300%;position: relative;right: 0%;bottom: 200%" alt="">
-            </div>
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(66.6% 33.3% 0% 33.3%);width: 300%;height: 300%;position: relative;right: 100%;bottom: 200%" alt="">
-            </div>
-            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
-                <img src="/fotoDefecto.png" style="clip-path: inset(66.6% 0% 0% 33.3%);width: 300%;height: 300%;position: relative;right: 200%;bottom: 200%" alt="">
-            </div>
-        </div>
-    </div>*/
-
     function reiniciarContenedorJuego(){
         const height=(1/dimension)*100+"%";
         const width=(1/dimension)*100+"%";
@@ -233,12 +295,46 @@
         html+='</div>';
         $("#contenedorJuego").html(html);
         if(validarVictoria()){
-            alert("Juego terminado!")
+            alert("Juego terminado!");
+            finalizarPartida();
         }
     }
-
+    function finalizarPartida(){
+        $.ajax({
+            url: '/eliminarPartida',
+            type: 'POST',
+            data:{
+                matrizLineal:matrizLineal
+            },
+            success: function (response) {
+                console.log("nueva partida Uwu");
+            },
+            error: function (xhr, status, error) {
+                console.log("aiuda")
+            }
+        });
+    }
+    function actualizarPartida(){
+        const nuevaMatrizLineal=obtenerMatrizLineal();
+        $.ajax({
+            url: '/actualizarPartida',
+            type: 'POST',
+            data:{
+                matrizLinealAntigua:matrizLineal,
+                matrizLinealNueva:nuevaMatrizLineal
+            },
+            success: function (response) {
+                matrizLineal=nuevaMatrizLineal;
+                console.log("actualización realizada Uwu");
+            },
+            error: function (xhr, status, error) {
+                console.log("aiuda")
+            }
+        });
+    }
     function seleccionarBloque(i,j){
         if(bloqueSeleccionado===false){
+            console.log("aaaa")
             posicionBloqueSeleccionado={x:i,y:j};
             bloqueSeleccionado=true;
             const bloque=$("#bloque"+i+""+j);
@@ -246,11 +342,15 @@
             bloque.css("background","gold");
             bloque.css("opacity","0.5");
             movimientoValido=(posicionBloqueDisponible.x==i+1&&posicionBloqueDisponible.y==j)||(posicionBloqueDisponible.x==i-1&&posicionBloqueDisponible.y==j)||(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j+1)||(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j-1);
+            console.log(movimientoValido);
+            console.log(posicionBloqueSeleccionado)
+            console.log(posicionBloqueDisponible)
             if(movimientoValido){
                 const bloqueDisponible=$("#bloque"+posicionBloqueDisponible.x+""+posicionBloqueDisponible.y);
                 bloqueDisponible.css("background","yellow");
             }
         }else {
+            console.log("eeee")
             if(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j){
                 if(movimientoValido){
                     const posicionAuxiliar=matriz[posicionBloqueSeleccionado.x][posicionBloqueSeleccionado.y];
@@ -263,17 +363,19 @@
             reiniciarContenedorJuego();
             movimientoValido=false;
             bloqueSeleccionado=false;
+            actualizarPartida();
         }
     }
 
     function validarVictoria(){
-        console.log(matriz);
-        if(matriz==[ [{x:0,y:0},{x:0,y:1},{x:0,y:2}],[{x:1,y:0},{x:1,y:1},{x:1,y:2}],[{x:2,y:0},{x:2,y:1},{x:2,y:2}] ]){
-            console.log("yupi")
-            return true;
-        }else {
-            return false;
+        for(let i=0;i<dimension;i++){
+            for(let j=0;j<dimension;j++){
+                if(matriz[i][j].x!==i||matriz[i][j].y!==j){
+                    return false;
+                }
+            }
         }
+        return true;
     }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
