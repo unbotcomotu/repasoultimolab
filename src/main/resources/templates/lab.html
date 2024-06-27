@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>STF-Puzzle Simplified Version</title>
+    <link rel="stylesheet" href="/css/bootstrap.css">
+    <script src="/js/bootstrap.js"></script>
+    <style>
+        .ajustarCentro{
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .botonCambiarColor{
+            color: transparent;
+            border: 1px solid black;
+            position: relative;
+            padding: 2px;
+        }
+        .botonCambiarColor::before,.botonCambiarColor::after{
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            pointer-events: none;
+        }
+        .botonCambiarColor::before {
+            top: -6px;
+            left: -6px;
+            right: -6px;
+            bottom: -6px;
+            border: 5px solid white;
+        }
+
+        .botonCambiarColor::after {
+            top: -7px;
+            left: -7px;
+            right: -7px;
+            bottom: -7px;
+            border: 1px solid black
+        }
+
+    </style>
+</head>
+<body style="padding: 20px">
+<h1>STF-Puzzle Simplified Version</h1>
+<div class="row ajustarCentro" id="bloqueSeleccionJugador" style="width: 500px;height: auto">
+    <div class="row text-center ajustarCentro" style="margin-bottom: 20px;margin-top: 10px">
+        <img src="/fotoDefecto.png" style="max-width: 300px;opacity: 0" alt="">
+        <img src="/fotoDefecto.png" id="imagenMostrar" class="img-fluid" style="max-width: 300px;clip-path: inset(25% 25% 25% 25%);z-index: 10000;position: absolute" alt="">
+
+        <input type="file" onchange="cambiarFoto(event)" accept="image/jpeg" style="display: none" id="imagenInput">
+    </div>
+    <div style="display: flex;justify-content: space-between;margin-left: 10px;margin-right: 10px;padding: 20px" class="row">
+        <a style="width: 30%;cursor: pointer" onclick="cambiarColor()" class="botonCambiarColor"></a>
+        <input id="dimensiones" style="width: auto" placeholder="Ingrese las dimensiones del puzzle" class="form-control">
+    </div>
+    <div class="row" style="display: flex;justify-content: center;margin-bottom: 10px;margin-top: 20px">
+        <a class="btn btn-success" onclick="clicarSeleccionarFoto()" style="width: auto;padding: 10px">Seleccionar personaje</a>
+    </div>
+</div>
+<div class="row text-center" id="botonIniciarJuego" style="width: 500px;display: none">
+    <a onclick="iniciarJuego()" class="btn btn-success">Iniciar juego</a>
+</div>
+<div class="row text-center" id="contenedorJuego" style="width: 100%;display: none">
+
+</div>
+<script>
+    let urlFoto=null
+    let numeroColorActual=0;
+    const listaColores=["green","red","blue","skyblue","purple","orange","darkred","lightgreen"];
+    let matriz=[];
+    let matrizImagenes=[];
+    function clicarSeleccionarFoto(){
+        document.getElementById("imagenInput").click()
+    }
+
+    function cambiarFoto(event){
+        const file = event.target.files[0];
+        if (file&&file.type==="image/jpeg") {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageContainer = $('#imagenMostrar');
+                const url=e.target.result;
+                imageContainer.attr("src",url);
+                urlFoto=url;
+            };
+            reader.readAsDataURL(file);
+        }
+    }
+    function cambiarColor(){
+        for(let i=0;i<listaColores.length;i++){
+            if(numeroColorActual==listaColores.length){
+                numeroColorActual=0;
+            }else {
+                numeroColorActual++;
+            }
+        }
+        $("#bloqueSeleccionJugador").css("background",listaColores[numeroColorActual]);
+    }
+
+    function validarIniciarJuego(){
+        const imagen=$("#imagenMostrar");
+        const dimensiones=$("dimensiones").val();
+        const aux=dimensiones.split("x");
+        const botonIniciarJuego=$("#botonIniciarJuego");
+        let flag=true;
+        if(aux.length!==2){
+            flag=false;
+        }
+        if(isNaN(aux[0])||isNaN(aux[1])){
+            flag=false;
+        }
+        if(aux[0]!==aux[1]){
+            flag=false;
+        }
+        if(imagen.attr("src")!==""&&flag){
+            botonIniciarJuego.css("display","");
+        }else {
+            botonIniciarJuego.css("display","none");
+        }
+    }
+    function iniciarJuego(){
+        matriz=[];
+        $("#bloqueSeleccionJugador").css("display","none");
+        $("#botonIniciarJuego").css("display","none");
+        const dimensiones=$("#dimensiones").val()
+        const dimension=dimensiones.split("x")[0];
+        const contenedorJuego=$("#contenedorJuego");
+        for(let i=0;i<dimension;i++){
+            let fila=[];
+            let filaImagenes=[]
+            for(let j=0;j<dimension;j++){
+                fila.push(i*dimension+j);
+                const html='<div class="contenedorImagen">' +
+                    '<img src="'+urlFoto+'" style="clip-path: " alt=""/>'
+                    '</div>'
+            }
+            matriz.push(fila);
+        }
+    }
+
+    function inicializarContenedorImagenes(){
+        let html="";
+
+    }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+</body>
+</html>
