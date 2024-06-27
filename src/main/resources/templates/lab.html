@@ -49,13 +49,13 @@
 <div class="row ajustarCentro" id="bloqueSeleccionJugador" style="width: 500px;height: auto">
     <div class="row text-center ajustarCentro" style="margin-bottom: 20px;margin-top: 10px">
         <img src="/fotoDefecto.png" style="max-width: 300px;opacity: 0" alt="">
-        <img src="/fotoDefecto.png" id="imagenMostrar" class="img-fluid" style="max-width: 300px;clip-path: inset(25% 25% 25% 25%);z-index: 10000;position: absolute" alt="">
+        <img src="/fotoDefecto.png" id="imagenMostrar" class="img-fluid" style="max-width: 300px;z-index: 10000;position: absolute" alt="">
 
         <input type="file" onchange="cambiarFoto(event)" accept="image/jpeg" style="display: none" id="imagenInput">
     </div>
     <div style="display: flex;justify-content: space-between;margin-left: 10px;margin-right: 10px;padding: 20px" class="row">
         <a style="width: 30%;cursor: pointer" onclick="cambiarColor()" class="botonCambiarColor"></a>
-        <input id="dimensiones" style="width: auto" placeholder="Ingrese las dimensiones del puzzle" class="form-control">
+        <input onchange="validarIniciarJuego()" id="dimensiones" style="width: auto" placeholder="Ingrese las dimensiones del puzzle" class="form-control">
     </div>
     <div class="row" style="display: flex;justify-content: center;margin-bottom: 10px;margin-top: 20px">
         <a class="btn btn-success" onclick="clicarSeleccionarFoto()" style="width: auto;padding: 10px">Seleccionar personaje</a>
@@ -65,18 +65,22 @@
     <a onclick="iniciarJuego()" class="btn btn-success">Iniciar juego</a>
 </div>
 <div class="row text-center" id="contenedorJuego" style="width: 100%;display: none">
-
 </div>
 <script>
-    let urlFoto=null
+    let urlFoto="fotoDefecto.png";
     let numeroColorActual=0;
     const listaColores=["green","red","blue","skyblue","purple","orange","darkred","lightgreen"];
     let matriz=[];
     let matrizImagenes=[];
+    let dimension=null;
+    const dimensionContenedor="1000px";
     function clicarSeleccionarFoto(){
         document.getElementById("imagenInput").click()
     }
-
+    let bloqueSeleccionado=false;
+    let posicionBloqueSeleccionado=null;
+    let posicionBloqueDisponible=null;
+    let movimientoValido=false;
     function cambiarFoto(event){
         const file = event.target.files[0];
         if (file&&file.type==="image/jpeg") {
@@ -89,6 +93,7 @@
             };
             reader.readAsDataURL(file);
         }
+        validarIniciarJuego();
     }
     function cambiarColor(){
         for(let i=0;i<listaColores.length;i++){
@@ -103,7 +108,7 @@
 
     function validarIniciarJuego(){
         const imagen=$("#imagenMostrar");
-        const dimensiones=$("dimensiones").val();
+        const dimensiones=$("#dimensiones").val();
         const aux=dimensiones.split("x");
         const botonIniciarJuego=$("#botonIniciarJuego");
         let flag=true;
@@ -126,25 +131,119 @@
         matriz=[];
         $("#bloqueSeleccionJugador").css("display","none");
         $("#botonIniciarJuego").css("display","none");
-        const dimensiones=$("#dimensiones").val()
-        const dimension=dimensiones.split("x")[0];
+        dimension=$("#dimensiones").val().split("x")[0]
         const contenedorJuego=$("#contenedorJuego");
+        const dimensionImagen=dimension*100+"%";
         for(let i=0;i<dimension;i++){
             let fila=[];
             let filaImagenes=[]
+            const desplazamientoImagenBottom=i*100+"%";
             for(let j=0;j<dimension;j++){
-                fila.push(i*dimension+j);
-                const html='<div class="contenedorImagen">' +
-                    '<img src="'+urlFoto+'" style="clip-path: " alt=""/>'
-                    '</div>'
+                const topInset=i/dimension;
+                const rightInset=(dimension-j-1)/dimension;
+                const bottomInset=(dimension-i-1)/dimension;
+                const leftInset=j/dimension;
+                const desplazamientoImagenRight=j*100+"%";
+                fila.push({x:i,y:j});
+                if(i==dimension-1&&j==dimension-1){
+                    filaImagenes.push('<img style="clip-path: inset('+topInset+' '+rightInset+' '+bottomInset+' '+leftInset+');width: '+dimensionImagen+';height: '+dimensionImagen+';position: relative;right: '+desplazamientoImagenRight+';bottom: '+desplazamientoImagenBottom+'" alt="">\n')
+                }else {
+                    filaImagenes.push('<img src="'+urlFoto+'" style="clip-path: inset('+topInset+' '+rightInset+' '+bottomInset+' '+leftInset+');width: '+dimensionImagen+';height: '+dimensionImagen+';position: relative;right: '+desplazamientoImagenRight+';bottom: '+desplazamientoImagenBottom+'" alt="">\n');
+                }
             }
+            posicionBloqueDisponible={x:dimension-1,y:dimension-1};
             matriz.push(fila);
+            matrizImagenes.push(filaImagenes);
         }
+        contenedorJuego.css("display","");
+        reiniciarContenedorJuego();
+    }
+    /*<div className="row" style="height: 500px;width: 500px">
+        <div className="row" style="width: 100%;height: 33.3%">
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(0% 66.6% 66.6% 0%);width: 300%;height: 300%;position: relative;right: 0%;top: 0%" alt="">
+            </div>
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(0% 33.3% 66.6% 33.3%);width: 300%;height: 300%;position: relative;right: 100%;top: 0%" alt="">
+            </div>
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(0% 0% 66.6% 66.6%);width: 300%;height: 300%;position: relative;right: 200%;top: 0%" alt="">
+            </div>
+        </div>
+        <div className="row" style="width: 100%;height: 33.3%">
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(33.3% 66.6% 33.3% 0%);width: 300%;height: 300%;position: relative;right: 0%;bottom: 100%" alt="">
+            </div>
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(33.3% 33.3% 33.3% 33.3%);width: 300%;height: 300%;position: relative;right: 100%;bottom: 100%" alt="">
+            </div>
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(33.3% 0% 33.3% 66.6%);width: 300%;height: 300%;position: relative;right: 200%;bottom: 100%" alt="">
+            </div>
+        </div>
+        <div className="row" style="width: 100%;height: 33.3%">
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(66.6% 66.6% 0% 0%);width: 300%;height: 300%;position: relative;right: 0%;bottom: 200%" alt="">
+            </div>
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(66.6% 33.3% 0% 33.3%);width: 300%;height: 300%;position: relative;right: 100%;bottom: 200%" alt="">
+            </div>
+            <div style="width: 33.3%;height: 100%;padding: 0;border: black solid 2px">
+                <img src="/fotoDefecto.png" style="clip-path: inset(66.6% 0% 0% 33.3%);width: 300%;height: 300%;position: relative;right: 200%;bottom: 200%" alt="">
+            </div>
+        </div>
+    </div>*/
+
+    function reiniciarContenedorJuego(){
+        console.log(matriz);
+        console.log(matrizImagenes);
+        const height=(1/dimension)*100+"%";
+        const width=(1/dimension)*100+"%";
+        let html='<div class="row" style="height: '+dimensionContenedor+';width: '+dimensionContenedor+'">\n';
+        for(let i=0;i<dimension;i++){
+            html+='<div class="row" style="width: 100%;height: '+height+'">\n';
+            for(let j=0;j<dimension;j++){
+                const posicionActual=matriz[i][j];
+                html+='<div id="bloque'+i+''+j+'" onclick="seleccionarBloque('+i+','+j+')" style="background: #6c757d;width: '+width+';height: 100%;padding: 0;border: black solid 2px;cursor: default;overflow: hidden">\n';
+                html+=matrizImagenes[posicionActual.x][posicionActual.y];
+                html+='</div>\n';
+            }
+            html+='</div>\n';
+        }
+        html+='</div>';
+        $("#contenedorJuego").html(html);
     }
 
-    function inicializarContenedorImagenes(){
-        let html="";
-
+    function seleccionarBloque(i,j){
+        if(bloqueSeleccionado===false){
+            posicionBloqueSeleccionado={x:i,y:j};
+            bloqueSeleccionado=true;
+            const bloque=$("#bloque"+i+""+j);
+            bloque.children().eq(0).css("opacity","0.5");
+            bloque.css("background","gold");
+            bloque.css("opacity","0.5");
+            movimientoValido=(posicionBloqueDisponible.x==i+1&&posicionBloqueDisponible.y==j)||(posicionBloqueDisponible.x==i-1&&posicionBloqueDisponible.y==j)||(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j+1)||(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j-1);
+            console.log(movimientoValido);
+            if(movimientoValido){
+                console.log(posicionBloqueDisponible)
+                const bloqueDisponible=$("#bloque"+posicionBloqueDisponible.x+""+posicionBloqueDisponible.y);
+                console.log(bloqueDisponible);
+                bloqueDisponible.css("background","yellow");
+            }
+        }else {
+            if(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j){
+                if(movimientoValido){
+                    const htmlBloqueSeleccionado=$("#bloque"+posicionBloqueSeleccionado.x+""+posicionBloqueSeleccionado.y).html();
+                    const htmlBloqueDisponible=$("#bloque"+posicionBloqueDisponible.x+""+posicionBloqueDisponible.y).html();
+                    const posicionAuxiliar=matriz[posicionBloqueSeleccionado.x][posicionBloqueSeleccionado.y];
+                    matriz[posicionBloqueSeleccionado.x][posicionBloqueSeleccionado.y]=matriz[posicionBloqueDisponible.x][posicionBloqueDisponible.y];
+                    matriz[posicionBloqueDisponible.x][posicionBloqueDisponible.y]=posicionAuxiliar;
+                }
+            }
+            reiniciarContenedorJuego();
+            movimientoValido=false;
+            bloqueSeleccionado=false;
+        }
     }
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
