@@ -81,6 +81,7 @@
     let posicionBloqueSeleccionado=null;
     let posicionBloqueDisponible=null;
     let movimientoValido=false;
+    const cantidadDeMovimientosIniciales=9;
     function cambiarFoto(event){
         const file = event.target.files[0];
         if (file&&file.type==="image/jpeg") {
@@ -156,7 +157,28 @@
             matrizImagenes.push(filaImagenes);
         }
         contenedorJuego.css("display","");
+        realizarMoviemientosAleatorios();
         reiniciarContenedorJuego();
+    }
+    function realizarMoviemientosAleatorios(){
+        let contador=0;
+        while(1){
+            console.log(contador)
+            const i1=Math.floor((Math.random()*dimension));
+            const j1=Math.floor((Math.random()*dimension));
+            const i2=posicionBloqueDisponible.x;
+            const j2=posicionBloqueDisponible.y;
+            if((i1===i2&&j1===j2+1)||(i1===i2&&j1===j2-1)||(i1===i2+1&&j1===j2)||(i1===i2-1&&j1===j2)){
+                const posicionAuxiliar=matriz[i1][j1];
+                matriz[i1][j1]=matriz[i2][j2];
+                matriz[i2][j2]=posicionAuxiliar;
+                posicionBloqueDisponible={x:i1,y:j1};
+                contador++
+                if(contador===cantidadDeMovimientosIniciales){
+                    return;
+                }
+            }
+        }
     }
     /*<div className="row" style="height: 500px;width: 500px">
         <div className="row" style="width: 100%;height: 33.3%">
@@ -195,8 +217,6 @@
     </div>*/
 
     function reiniciarContenedorJuego(){
-        console.log(matriz);
-        console.log(matrizImagenes);
         const height=(1/dimension)*100+"%";
         const width=(1/dimension)*100+"%";
         let html='<div class="row" style="height: '+dimensionContenedor+';width: '+dimensionContenedor+'">\n';
@@ -212,6 +232,9 @@
         }
         html+='</div>';
         $("#contenedorJuego").html(html);
+        if(validarVictoria()){
+            alert("Juego terminado!")
+        }
     }
 
     function seleccionarBloque(i,j){
@@ -223,26 +246,33 @@
             bloque.css("background","gold");
             bloque.css("opacity","0.5");
             movimientoValido=(posicionBloqueDisponible.x==i+1&&posicionBloqueDisponible.y==j)||(posicionBloqueDisponible.x==i-1&&posicionBloqueDisponible.y==j)||(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j+1)||(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j-1);
-            console.log(movimientoValido);
             if(movimientoValido){
-                console.log(posicionBloqueDisponible)
                 const bloqueDisponible=$("#bloque"+posicionBloqueDisponible.x+""+posicionBloqueDisponible.y);
-                console.log(bloqueDisponible);
                 bloqueDisponible.css("background","yellow");
             }
         }else {
             if(posicionBloqueDisponible.x==i&&posicionBloqueDisponible.y==j){
                 if(movimientoValido){
-                    const htmlBloqueSeleccionado=$("#bloque"+posicionBloqueSeleccionado.x+""+posicionBloqueSeleccionado.y).html();
-                    const htmlBloqueDisponible=$("#bloque"+posicionBloqueDisponible.x+""+posicionBloqueDisponible.y).html();
                     const posicionAuxiliar=matriz[posicionBloqueSeleccionado.x][posicionBloqueSeleccionado.y];
                     matriz[posicionBloqueSeleccionado.x][posicionBloqueSeleccionado.y]=matriz[posicionBloqueDisponible.x][posicionBloqueDisponible.y];
                     matriz[posicionBloqueDisponible.x][posicionBloqueDisponible.y]=posicionAuxiliar;
+                    posicionBloqueDisponible=posicionBloqueSeleccionado;
+                    posicionBloqueSeleccionado=null;
                 }
             }
             reiniciarContenedorJuego();
             movimientoValido=false;
             bloqueSeleccionado=false;
+        }
+    }
+
+    function validarVictoria(){
+        console.log(matriz);
+        if(matriz==[ [{x:0,y:0},{x:0,y:1},{x:0,y:2}],[{x:1,y:0},{x:1,y:1},{x:1,y:2}],[{x:2,y:0},{x:2,y:1},{x:2,y:2}] ]){
+            console.log("yupi")
+            return true;
+        }else {
+            return false;
         }
     }
 </script>
